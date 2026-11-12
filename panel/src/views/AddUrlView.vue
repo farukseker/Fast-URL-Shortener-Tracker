@@ -1,9 +1,14 @@
 <template>
-<section class="w-full flex justify-center h-screen absolute top-0 left-0 pt-20 overflow-auto">
-    <article class="m-auto">
-        <UrlForm @on_save="save" />
-    </article>
-</section>
+  <main class="app-page app-page--narrow">
+    <header class="app-page-heading">
+      <div>
+        <p class="app-kicker">Short links</p>
+        <h2>Create a short link</h2>
+        <p class="app-description">Add a destination, choose its type, and organize it with categories</p>
+      </div>
+    </header>
+    <UrlForm @on_save="save" />
+  </main>
 </template> 
 
 

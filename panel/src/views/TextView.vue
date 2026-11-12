@@ -1,27 +1,44 @@
 <template>
-  <div style="display:flex; gap:12px; margin-bottom:12px;">
-    <select v-model="selectedYear">
-      <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-    </select>
+  <main class="app-page app-page--medium">
+    <header class="app-page-heading">
+      <div>
+        <p class="app-kicker">Chart preview</p>
+        <h2>Visit trend</h2>
+        <p class="app-description">Explore the trend by year or month</p>
+      </div>
+    </header>
 
-    <select v-model="selectedMonth">
-      <option value="all">All</option>
-      <option v-for="m in 12" :key="m" :value="m">
-        {{ String(m).padStart(2, '0') }}
-      </option>
-    </select>
-  </div>
+    <section class="app-panel trend-panel" aria-label="Visit trend chart">
+      <div class="trend-filters">
+        <label class="app-field">
+          <span>Year</span>
+          <span class="app-control">
+            <select v-model="selectedYear">
+              <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+            </select>
+          </span>
+        </label>
 
-  <Chart
-    type="line"
-    height="350"
-    :options="chartOptions"
-    :series="series"
-  />
+        <label class="app-field">
+          <span>Month</span>
+          <span class="app-control">
+            <select v-model="selectedMonth">
+              <option value="all">All months</option>
+              <option v-for="month in 12" :key="month" :value="month">
+                {{ String(month).padStart(2, '0') }}
+              </option>
+            </select>
+          </span>
+        </label>
+      </div>
+
+      <Chart type="line" height="350" :options="chartOptions" :series="series" />
+    </section>
+  </main>
 </template>
 
 <script setup>
-import { ref, watch } from "vue"
+import { ref, watch, onMounted, onBeforeUnmount } from "vue"
 
 /* ------------------ FAKE ORDER DATA ------------------ */
 const rawData = [
@@ -43,15 +60,23 @@ const years = [...new Set(dates.map(d => d.getFullYear()))].sort()
 
 const today = new Date()
 
-const selectedYear = ref(today.getFullYear())
-const selectedMonth = ref(String(today.getMonth() + 1))
+const selectedYear = ref(years[years.length - 1] ?? today.getFullYear())
+const selectedMonth = ref("all")
 
 const chartOptions = ref({
   chart: {
-    toolbar: { show: false }
+    toolbar: { show: false },
+    foreColor: "#a1a1a6",
+    background: "transparent"
   },
-  stroke: { curve: "smooth" },
-  xaxis: { categories: [] }
+  colors: ["#f29a62"],
+  theme: { mode: "dark" },
+  dataLabels: { enabled: false },
+  stroke: { curve: "smooth", width: 2.5 },
+  markers: { size: 0, hover: { size: 5 } },
+  grid: { borderColor: "#343436", strokeDashArray: 4 },
+  xaxis: { categories: [], axisBorder: { show: false }, axisTicks: { show: false } },
+  tooltip: { theme: "dark" }
 })
 
 const series = ref([{ name: "Orders", data: [] }])
@@ -104,5 +129,60 @@ const updateChart = () => {
 
   chartOptions.value.xaxis.categories = categories
 }
+
+const applyChartTheme = () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+  const accent = isDark ? "#f29a62" : "#a84310"
+
+  chartOptions.value = {
+    ...chartOptions.value,
+    chart: {
+      ...chartOptions.value.chart,
+      foreColor: isDark ? "#a1a1a6" : "#525252"
+    },
+    colors: [accent],
+    theme: { mode: isDark ? "dark" : "light" },
+    grid: {
+      ...chartOptions.value.grid,
+      borderColor: isDark ? "#343436" : "#e4e4e7"
+    },
+    tooltip: { theme: isDark ? "dark" : "light" }
+  }
+}
+
+const themeObserver = new MutationObserver(applyChartTheme)
+
+onMounted(() => {
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"]
+  })
+  applyChartTheme()
+})
+
+onBeforeUnmount(() => themeObserver.disconnect())
+
 watch([selectedYear, selectedMonth], updateChart, { immediate: true })
 </script>
+
+<style scoped>
+.trend-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.trend-filters {
+  display: flex;
+  gap: 16px;
+}
+
+.trend-filters .app-control {
+  min-width: 130px;
+}
+
+@media (max-width: 480px) {
+  .trend-filters {
+    flex-direction: column;
+  }
+}
+</style>

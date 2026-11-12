@@ -1,145 +1,250 @@
 <template>
-
-<section class="w-full flex justify-center h-screen absolute top-0 left-0 pt-10 mx-auto overflow-auto ">
-  <article class="flex flex-col gap-4 p-4 w-full md:w-2/3 mt-10">
-    <fieldset class="fieldset bg-base-200 rounded-box w-full p-4 shadow-xl border border-primary">
-        <legend class="fieldset-legend">Url details ({{ url_id }})</legend>
-        <div class="gird flex grid-cols-2 h-60">
-            <div class="text-lg w-full">
-                <div class="mb-2">
-                    <RouterLink
-                    class="btn btn-primary"
-                    :to="{ name: 'manage-url', params: { url_code: url_data.code } }"
-                    >
-                    Edit
-                    </RouterLink>
-                </div>
-                <ul>
-                    <li><strong>Url:</strong> {{ url_data.url }}</li>
-                    <li><strong>Code:</strong> {{ url_data.code }}</li>
-                    <li><strong>Created:</strong>  {{ humanReadable(url_data.created_at) }}</li>
-                    <li>
-                        <strong>Type: </strong>
-                        <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Image"><Icon v-if="url_data.url_type === 'image'" :icon="faImage" /></div> 
-                        <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Video"><Icon v-if="url_data.url_type === 'video'" :icon="faVideo" /></div> 
-                        <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Url"><Icon v-if="url_data.url_type === 'url'" :icon="faLink" /></div>
-                    </li>
-                </ul>
-            </div>
-            <div class="rounded shadow bg-base-300 w-1/2 flex justify-center">
-                <span v-if="url_data.url_type !== 'image'" class="m-auto">Coming soon</span>
-                <div
-                v-else
-                class="bg-no-repeat bg-center h-full w-full"
-                :style="`background-image: url(${url_data.url}); background-size: contain;`">
-                </div>
-            </div>
+  <main class="visit-dashboard">
+    <div class="app-page">
+      <header class="app-page-heading">
+        <div>
+          <p class="app-kicker">Short link</p>
+          <h2>Link activity</h2>
+          <p class="app-description">Track visits over time and review where they came from</p>
         </div>
-    </fieldset>
+        <RouterLink
+          class="app-button app-button-primary edit-link"
+          :to="{ name: 'manage-url', params: { url_code: url_data.code } }"
+        >
+          Edit link
+        </RouterLink>
+      </header>
 
-    <hr class="mt-3">
+      <section class="app-panel dashboard-panel link-panel" aria-labelledby="link-details-title">
+        <header class="app-panel-heading panel-heading">
+          <div>
+            <p class="app-kicker">Destination</p>
+            <h3 id="link-details-title">Link details</h3>
+          </div>
+          <span class="item-id">ID {{ url_id }}</span>
+        </header>
 
-    <fieldset class="fieldset bg-base-200 rounded-box w-full p-4 shadow-xl border border-primary mb-20">
-        <legend class="fieldset-legend">Visit details ({{ visit_data.length }})</legend>
-        <div role="tablist" class="tabs tabs-border">
-            <a role="tab" class="tab" :class="tab === 'charts' ? 'tab-active':''" @click="tab='charts'">Chart's</a>
-            <a role="tab" class="tab" :class="tab === 'logs' ? 'tab-active':''" @click="tab='logs'">Log's</a>
-        </div>
-        <div v-if="tab === 'charts'" class="flex flex-col gap-4">
-            <div class="flex gap-2">
-                <select v-model="selectedYear" class="select select-bordered select-sm">
-                <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-                </select>
-
-                <select v-model="selectedMonth" class="select select-bordered select-sm">
-                <option :value="0">All</option>
-                <option v-for="m in 12" :key="m" :value="m">
-                    {{ String(m).padStart(2,'0') }}
-                </option>
-                </select>
+        <div class="link-content">
+          <dl class="link-metadata">
+            <div class="metadata-item destination-item">
+              <dt>Destination URL</dt>
+              <dd>{{ url_data.url || '—' }}</dd>
             </div>
-            <Chart
-              :key="chartKey"
-              type="line"
-              height="350"
-              :options="chartOptions"
-              :series="series"
-            />
-        </div>
-        <div v-if="tab === 'logs'">
-            <label class="input w-full border-0 border-b shadow outline-0 my-4">
-                <Icon :icon="faSearch" />
-                <input
-                  v-model="searchQuery"
-                  class="grow"
-                  placeholder="IP | Provider | Country | City"
-                  type="text"
+            <div class="metadata-item">
+              <dt>Short code</dt>
+              <dd class="code-value">{{ url_data.code || '—' }}</dd>
+            </div>
+            <div class="metadata-item">
+              <dt>Created</dt>
+              <dd>{{ url_data.created_at ? humanReadable(url_data.created_at) : '—' }}</dd>
+            </div>
+            <div class="metadata-item">
+              <dt>Type</dt>
+              <dd class="type-value">
+                <Icon
+                  v-if="url_data.url_type === 'image'"
+                  :icon="faImage"
+                  aria-hidden="true"
                 />
-            </label>
-            <div class="overflow-x-auto">
-                <table class="table table-zebra">
-                <thead class="sticky top-0 z-10 bg-base-100">
-                    <tr>
-                        <th></th>
-                        <th class="text-center">Country</th>
-                        <th class="text-center">City</th>
-                        <th class="text-center">Ip Address</th>
-                        <th class="text-center">Count</th>
-                        <th class="text-center">Date-Time</th>
-                        <th class="text-center">Edit</th>
-                        <!-- <th class="text-center">Delete</th> -->
-                    </tr>
-                </thead>
-                <tbody>
-                    <template v-for="(visit, index) in filteredVisits" :key="index">
-                    <tr class="text-center" :class="2%index === 0 ? 'bg-base-300': ''">
-                        <th>{{ index + 1 }}</th>
-                        <td>{{ visit.country ? visit.country:'-' }}</td>
-                        <td>{{ visit.geo_data?.region ? visit.geo_data?.region:'-' }}/{{ visit.geo_data?.city ? visit.geo_data?.city:'-' }}</td>
-                        <td>{{ visit.ip_address ? visit.ip_address:'-' }}</td>
-                        <td>{{ visit.count }}</td>
-                        <td>{{ humanReadable(visit.action_at) }}</td>
-                        <td @click="visit.show_detail =! visit.show_detail" class="min-w-32">
-                            <span class="">{{ visit.show_detail ? 'Hide':'Details'}}</span>
-                        </td>
-                    </tr>
-                    <template v-if="visit.show_detail">
-                      <tr>
-                          <td class="shadow" :colspan="7">
-                              <ul>
-                                  <li><strong>Provider: </strong>{{ visit.geo_data?.isp || '-' }}</li>
-                                  <li><strong>Provider Name: </strong>{{ visit.geo_data?.org || '-' }}</li>
-                                  <li><strong>Post Code: </strong>{{ visit.geo_data?.zip || '-' }}</li>
-                                  <li><strong>User Agent: </strong>{{visit.user_agent}}</li>
-                              </ul> 
-                          </td>
-                      </tr>
-                      <tr>
-                          <td class="shadow" :colspan="7">
-                            <VisitMap
-                              v-if="visit.geo_data?.lat && visit.geo_data?.lon"
-                              :lat="visit.geo_data.lat"
-                              :lon="visit.geo_data.lon"
-                            />
-                            <span v-else>- No geo location -</span>
-                          </td>
-                      </tr>
-                    </template>
-                  </template>
-                </tbody>
-                </table>
+                <Icon
+                  v-else-if="url_data.url_type === 'video'"
+                  :icon="faVideo"
+                  aria-hidden="true"
+                />
+                <Icon
+                  v-else-if="url_data.url_type === 'url'"
+                  :icon="faLink"
+                  aria-hidden="true"
+                />
+                {{ url_data.url_type || '—' }}
+              </dd>
             </div>
-        </div>
-    </fieldset>
+          </dl>
 
-    <div class="min-h-4"></div>
-  </article>
-</section>
+          <img
+            v-if="url_data.url_type === 'image'"
+            class="image-preview"
+            :src="url_data.url"
+            :alt="`Preview of ${url_data.code || 'short link'}`"
+          />
+        </div>
+      </section>
+
+      <section class="app-panel dashboard-panel activity-panel" aria-labelledby="activity-title">
+        <header class="app-panel-heading panel-heading activity-heading">
+          <div>
+            <p class="app-kicker">Traffic</p>
+            <h3 id="activity-title">Visit activity</h3>
+          </div>
+          <div class="record-count" aria-label="Visit records">
+            <span class="accent-mark" aria-hidden="true" />
+            <strong>{{ visit_data.length }}</strong>
+            <span>records</span>
+          </div>
+        </header>
+
+        <div class="activity-toolbar">
+          <div class="view-tabs" role="tablist" aria-label="Visit views">
+            <button
+              class="view-tab"
+              :class="{ 'is-active': tab === 'charts' }"
+              type="button"
+              role="tab"
+              :aria-selected="tab === 'charts'"
+              @click="tab = 'charts'"
+            >
+              Trend
+            </button>
+            <button
+              class="view-tab"
+              :class="{ 'is-active': tab === 'logs' }"
+              type="button"
+              role="tab"
+              :aria-selected="tab === 'logs'"
+              @click="tab = 'logs'"
+            >
+              Visit log
+            </button>
+          </div>
+
+          <div v-if="tab === 'charts'" class="date-filters">
+            <label class="filter-field">
+              <span>Year</span>
+              <select v-model="selectedYear" :disabled="!years.length">
+                <option v-if="!years.length" :value="selectedYear">No dates</option>
+                <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>Month</span>
+              <select v-model="selectedMonth">
+                <option :value="0">All months</option>
+                <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                  {{ month.label }}
+                </option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="tab === 'charts'" class="chart-container" role="tabpanel">
+          <Chart
+            :key="chartKey"
+            type="line"
+            height="320"
+            :options="chartOptions"
+            :series="series"
+          />
+        </div>
+
+        <div v-else class="log-view" role="tabpanel">
+          <label class="search-field">
+            <Icon :icon="faSearch" aria-hidden="true" />
+            <input
+              v-model="searchQuery"
+              aria-label="Search visit records"
+              placeholder="Search IP, provider, country, or city"
+              type="search"
+            />
+          </label>
+
+          <div class="table-container">
+            <table class="visits-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="row-number">#</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">IP address</th>
+                  <th scope="col" class="number-cell">Visits</th>
+                  <th scope="col">Date and time</th>
+                  <th scope="col" class="details-heading">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="(visit, index) in filteredVisits" :key="index">
+                  <tr :class="{ 'is-expanded': visit.show_detail }">
+                    <th scope="row" class="row-number">{{ index + 1 }}</th>
+                    <td>
+                      {{
+                        [visit.geo_data?.city, visit.geo_data?.region, visit.country]
+                          .filter(Boolean)
+                          .join(', ') || '—'
+                      }}
+                    </td>
+                    <td class="code-value">{{ visit.ip_address || '—' }}</td>
+                    <td class="number-cell">{{ visit.count }}</td>
+                    <td>{{ humanReadable(visit.action_at) }}</td>
+                    <td class="details-cell">
+                      <button
+                        class="details-button"
+                        type="button"
+                        :aria-expanded="visit.show_detail"
+                        @click="visit.show_detail = !visit.show_detail"
+                      >
+                        {{ visit.show_detail ? 'Hide' : 'View' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="visit.show_detail" class="expanded-row">
+                    <td colspan="6">
+                      <dl class="visit-metadata">
+                        <div>
+                          <dt>Location</dt>
+                          <dd>
+                            {{
+                              [visit.geo_data?.city, visit.geo_data?.region, visit.country]
+                                .filter(Boolean)
+                                .join(', ') || '—'
+                            }}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Provider</dt>
+                          <dd>{{ visit.geo_data?.isp || '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>Organization</dt>
+                          <dd>{{ visit.geo_data?.org || '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>Postcode</dt>
+                          <dd>{{ visit.geo_data?.zip || '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>User agent</dt>
+                          <dd>{{ visit.user_agent || '—' }}</dd>
+                        </div>
+                      </dl>
+                    </td>
+                  </tr>
+                  <tr v-if="visit.show_detail" class="map-row">
+                    <td colspan="6">
+                      <VisitMap
+                        v-if="visit.geo_data?.lat != null && visit.geo_data?.lon != null"
+                        :lat="visit.geo_data.lat"
+                        :lon="visit.geo_data.lon"
+                      />
+                      <span v-else class="empty-location">No location data</span>
+                    </td>
+                  </tr>
+                </template>
+                <tr v-if="!filteredVisits.length">
+                  <td colspan="6" class="empty-state">
+                    {{ visit_data.length ? 'No records match this search' : 'No visit records yet' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
 </template>
 
 <script setup>
 import axios from "axios"
-import { ref, computed, watch, onMounted, nextTick } from "vue"
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue"
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import localizedFormat from "dayjs/plugin/localizedFormat"
@@ -154,13 +259,6 @@ const { url_id, url_code } = defineProps(["url_id", "url_code"])
 
 const humanReadable = iso =>
   dayjs.utc(iso).local().format("DD MMMM YYYY HH:mm")
-
-const groupBy = (arr, fn) =>
-  arr.reduce((a, c) => {
-    const k = fn(c)
-    a[k] = (a[k] || 0) + 1
-    return a
-  }, {})
 
 const visit_data = ref([])
 const url_data = ref([])
@@ -187,20 +285,25 @@ const dates = computed(() =>
 )
 
 const years = computed(() =>
-  [...new Set(dates.value.map(d => d.getFullYear()))].sort()
+  [...new Set(dates.value.map(d => d.getFullYear()))].sort((a, b) => a - b)
 )
+const monthOptions = Array.from({ length: 12 }, (_, index) => ({
+  value: index + 1,
+  label: dayjs().month(index).format("MMM")
+}))
 const today = new Date()
 
 const selectedYear = ref(today.getFullYear())
-const selectedMonth = ref(today.getMonth() + 1) // 0 = all
+// const selectedMonth = ref(today.getMonth() + 1)
+const selectedMonth = ref(0)
 const selectedDay = ref(null)
-
-const isDarkTheme = () =>  document.body.getAttribute("data-theme") === "dark"
 
 const chartOptions = ref({
   chart: {
     toolbar: { show: false },
-    foreColor: "#374151",
+    foreColor: "#a1a1a6",
+    fontFamily: "inherit",
+    background: "transparent",
     events: {
       dataPointSelection(_, ctx, { dataPointIndex }) {
         const x = ctx.opts.xaxis.categories[dataPointIndex]
@@ -216,11 +319,22 @@ const chartOptions = ref({
       }
     }
   },
+  colors: ["#f29a62"],
   theme: {
-    mode: "light"
+    mode: "dark"
   },
-  stroke: { curve: "smooth" },
-  xaxis: { categories: [] },
+  dataLabels: { enabled: false },
+  stroke: { curve: "smooth", width: 2.5 },
+  markers: { size: 0, hover: { size: 5 } },
+  grid: { borderColor: "#343436", strokeDashArray: 4 },
+  xaxis: {
+    categories: [],
+    axisBorder: { show: false },
+    axisTicks: { show: false }
+  },
+  yaxis: { min: 0, forceNiceScale: true },
+  tooltip: { theme: "dark" },
+  noData: { text: "No visits in this period" },
   annotations: { xaxis: [] }
 })
 
@@ -229,16 +343,23 @@ const chartKey = ref(0)
 const applyChartTheme = () => {
   if (tab.value !== "charts") return
   const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+  const accent = isDark ? "#f29a62" : "#a84310"
 
   chartOptions.value = {
     ...chartOptions.value,
     chart: {
       ...chartOptions.value.chart,
-      foreColor: isDark ? "#e5e7eb" : "#374151"
+      foreColor: isDark ? "#a1a1a6" : "#525252"
     },
     theme: {
       mode: isDark ? "dark" : "light"
-    }
+    },
+    colors: [accent],
+    grid: {
+      ...chartOptions.value.grid,
+      borderColor: isDark ? "#343436" : "#e4e4e7"
+    },
+    tooltip: { theme: isDark ? "dark" : "light" }
   }
 
   chartKey.value++
@@ -305,10 +426,18 @@ const updateChart = () => {
   if (selectedMonth.value !== 0) {
     const todayDay = String(today.getDate()).padStart(2, "0")
     if (categories.includes(todayDay)) {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+      const accent = isDark ? "#f29a62" : "#a84310"
       chartOptions.value.annotations.xaxis.push({
         x: todayDay,
-        borderColor: "#ef4444",
-        label: { text: "Today" }
+        borderColor: accent,
+        label: {
+          text: "Today",
+          style: {
+            background: accent,
+            color: isDark ? "#24150d" : "#ffffff"
+          }
+        }
       })
     }
   }
@@ -317,20 +446,21 @@ const updateChart = () => {
 const searchQuery = ref("")
 
 const filteredVisits = computed(() => {
-  if (!searchQuery.value) return visit_data.value
-
-  const q = searchQuery.value.toLowerCase()
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return visit_data.value
 
   return visit_data.value.filter(v =>
     [
       v.ip_address,
-      v.ip_provider,
       v.country,
-      v.city
+      v.geo_data?.region,
+      v.geo_data?.city,
+      v.geo_data?.isp,
+      v.geo_data?.org
     ]
       .filter(Boolean)
       .some(field =>
-        field.toLowerCase().includes(q)
+        String(field).toLowerCase().includes(query)
       )
   )
 })
@@ -338,19 +468,34 @@ const filteredVisits = computed(() => {
 watch([visit_data, selectedYear, selectedMonth], updateChart)
 watch([selectedYear, selectedMonth], () => (selectedDay.value = null))
 
+watch(visit_data, () => {
+  if (!years.value.length) return
 
-const updateChartTheme = () => {
-  chartOptions.value.foreColor =
-    isDarkTheme() ? "#e5e7eb" : "#374151"
+  if (!years.value.includes(selectedYear.value)) {
+    selectedYear.value = years.value[years.value.length - 1]
+  }
+
+  const hasSelectedMonth = dates.value.some(date =>
+    date.getFullYear() === selectedYear.value &&
+    date.getMonth() + 1 === selectedMonth.value
+  )
+
+  if (!hasSelectedMonth) selectedMonth.value = 0
+})
+
+const updateTheme = () => {
+  applyChartTheme()
+  updateChart()
 }
 
-const observer = new MutationObserver(applyChartTheme)
+const observer = new MutationObserver(updateTheme)
 
-observer.observe(document.body, {
+observer.observe(document.documentElement, {
   attributes: true,
   attributeFilter: ["data-theme"]
 })
 
+onBeforeUnmount(() => observer.disconnect())
 
 onMounted(async () => {
   await get_url_visit_action_list()
@@ -358,3 +503,443 @@ onMounted(async () => {
   applyChartTheme()
 })
 </script>
+
+<style scoped>
+.visit-dashboard {
+  --page-surface: var(--app-page);
+  --panel-surface: var(--app-surface);
+  --raised-surface: var(--app-raised);
+  --border-color: var(--app-border);
+  --text-primary: var(--app-text);
+  --text-secondary: var(--app-text-secondary);
+  --text-muted: var(--app-text-muted);
+  --accent: var(--app-accent);
+  --accent-fill: var(--app-accent-fill);
+  --accent-ink: var(--app-accent-ink);
+  min-height: calc(100vh - 64px);
+  color: var(--text-primary);
+  background: var(--page-surface);
+}
+
+.view-tab:focus-visible,
+.details-button:focus-visible,
+.filter-field select:focus-visible,
+.search-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dashboard-panel {
+  width: 100%;
+}
+
+.link-panel {
+  margin-bottom: 24px;
+}
+
+.item-id {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.link-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.link-metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+
+.metadata-item {
+  min-width: 0;
+}
+
+.metadata-item dt,
+.visit-metadata dt {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.metadata-item dd,
+.visit-metadata dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.destination-item {
+  grid-column: 1 / -1;
+}
+
+.destination-item dd {
+  overflow-wrap: anywhere;
+}
+
+.code-value {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.type-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: capitalize;
+}
+
+.image-preview {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  max-height: 220px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--raised-surface);
+  object-fit: contain;
+}
+
+.activity-panel {
+  margin-bottom: 24px;
+}
+
+.activity-heading {
+  margin-bottom: 16px;
+}
+
+.record-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.record-count strong {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.accent-mark {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.activity-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.view-tab {
+  min-height: 40px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.view-tab:hover {
+  color: var(--text-primary);
+}
+
+.view-tab.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.date-filters {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.filter-field select {
+  min-width: 96px;
+  height: 36px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--raised-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.filter-field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.chart-container {
+  padding-top: 16px;
+}
+
+.log-view {
+  padding-top: 20px;
+}
+
+.search-field {
+  display: flex;
+  width: min(100%, 360px);
+  height: 40px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--raised-surface);
+  color: var(--text-muted);
+}
+
+.search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.visits-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.visits-table th,
+.visits-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.visits-table thead th {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.visits-table tbody tr:not(.expanded-row, .map-row):hover {
+  background: var(--raised-surface);
+}
+
+.row-number {
+  width: 40px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.number-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.details-heading,
+.details-cell {
+  text-align: right;
+}
+
+.details-button {
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--panel-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.details-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.expanded-row td,
+.map-row td {
+  padding: 16px;
+  background: var(--raised-surface);
+}
+
+.visit-metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.visit-metadata dd {
+  overflow-wrap: anywhere;
+}
+
+.map-row td {
+  padding-top: 0;
+}
+
+.empty-location {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.empty-state {
+  height: 96px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .link-content {
+    grid-template-columns: 1fr;
+  }
+
+  .image-preview {
+    min-height: 180px;
+  }
+
+  .activity-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .date-filters {
+    width: 100%;
+    padding-bottom: 12px;
+  }
+
+  .filter-field {
+    flex: 1;
+  }
+
+  .filter-field select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .visit-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .edit-link {
+    width: 100%;
+  }
+
+  .link-metadata {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .destination-item {
+    grid-column: auto;
+  }
+
+  .activity-heading {
+    align-items: flex-start;
+  }
+
+  .record-count {
+    padding-top: 4px;
+  }
+
+  .filter-field {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .visit-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .visits-table {
+    table-layout: fixed;
+  }
+
+  .visits-table thead th:first-child,
+  .visits-table thead th:nth-child(2),
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :first-child,
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :nth-child(2) {
+    display: none;
+  }
+
+  .visits-table thead th:nth-child(3),
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :nth-child(3) {
+    width: 32%;
+  }
+
+  .visits-table thead th:nth-child(4),
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :nth-child(4) {
+    width: 14%;
+  }
+
+  .visits-table thead th:nth-child(5),
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :nth-child(5) {
+    width: 34%;
+  }
+
+  .visits-table thead th:nth-child(6),
+  .visits-table tbody tr:not(.expanded-row):not(.map-row) > :nth-child(6) {
+    width: 20%;
+  }
+
+  .visits-table th,
+  .visits-table td {
+    padding: 10px 6px;
+    overflow-wrap: anywhere;
+  }
+
+  .visits-table tbody tr:not(.expanded-row, .map-row) > td:nth-child(5) {
+    font-size: 11px;
+  }
+}
+</style>

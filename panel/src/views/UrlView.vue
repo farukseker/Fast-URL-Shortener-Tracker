@@ -1,9 +1,14 @@
 <template>
-<section class="w-full flex justify-center h-screen absolute top-0 left-0 py-20 overflow-auto">
-    <article class="m-auto">
-        <UrlForm @on_save="on_save" @on_delete="on_delete" />
-    </article>
-</section>
+  <main class="app-page app-page--narrow">
+    <header class="app-page-heading">
+      <div>
+        <p class="app-kicker">Short links</p>
+        <h2>Edit short link</h2>
+        <p class="app-description">Update the destination, short code, or categories</p>
+      </div>
+    </header>
+    <UrlForm @on_save="on_save" @on_delete="on_delete" />
+  </main>
 
 </template>
 

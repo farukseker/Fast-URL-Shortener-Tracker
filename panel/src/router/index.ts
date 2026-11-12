@@ -10,7 +10,7 @@ const router = createRouter({
       path: '/',
       component: default_layout,
       meta: {
-        title: 'Url Tracker'
+        title: 'Short links'
       },
       children: [
         {
@@ -22,33 +22,33 @@ const router = createRouter({
           path: '/add',
           name: 'add-url',
           component: () => import('../views/AddUrlView.vue'),
-          meta: { title: 'Create New Url Tracker' }
+          meta: { title: 'Create link' }
         },
         {
           path: '/r/:url_code',
           name: 'manage-url',
           props:true,
           component: () => import('../views/UrlView.vue'),
-          meta: { title: 'Manage Url' }
+          meta: { title: 'Edit link' }
         },
         {
           path: '/categories',
           name: 'category-manage',
           component: () => import('../views/CategoryManage.vue'),
-          meta: { title: 'Manage Categories' }
+          meta: { title: 'Categories' }
         },
         {
           path: '/analytical/:url_id/:url_code',
           name: 'analytical-view',
           props:true,
           component: () => import('../views/UrlVisitView.vue'),
-          meta: { title: 'Url Visit Actions' }
+          meta: { title: 'Link analytics' }
         },
         {
           path: '/test',
           name: 'test',
           component: () => import('../views/TextView.vue'),
-          meta: { title: '- TEST -' }
+          meta: { title: 'Chart preview' }
         }
       ]
 

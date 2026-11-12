@@ -1,41 +1,53 @@
 <template>
-    <section class="h-screen">
-        <header class="navbar shadow-sm z-10 bg-base-100">
-            <div class="container mx-auto flex relative">
-                <div class="flex-none">
-                    <button v-if="$route.name !== 'home'" @click="$router.back" class="btn btn-square btn-ghost">
-                        <Icon :icon="faChevronLeft" />
-                    </button>
-                    <a class="btn btn-ghost text-xl" href="/">Ulrich</a>
-                </div>
-                <div class="flex-1 flex absolute top-0 left-0 w-full h-full -z-10">
-                    <h1 class="text-xl font-bold text-primary m-auto">{{ $route.meta.title}}</h1>
-                </div>
-                <div class="w-full"></div>
-                <div class="flex-none">
-                    <details class="dropdown dropdown-end">
-                        <summary class="btn btn-ghost m-1">
-                            <Icon :icon="faEllipsis" />
-                        </summary>
-                        <ul class="menu dropdown-content bg-base-100 rounded-box z-1 min-w-100 md:min-w-52 right-0 p-2 shadow-sm">
-                            <li v-if="themeStore.theme === 'dark'" @click="themeStore.set_theme('light')">Dark Mode</li>
-                            <li v-if="themeStore.theme === 'light'" @click="themeStore.set_theme('dark')">Light Mode</li>
-                        </ul>
-                    </details>
-                </div>
-            </div>
-        </header>
-        <article class="px-4 container mx-auto ">
-            <Notifications position="bottom right" :max="5" />
-            <RouterView />
-        </article>
-    </section>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="app-header-brand">
+          <button
+            v-if="$route.name !== 'home'"
+            class="app-icon-button"
+            type="button"
+            aria-label="Go back"
+            @click="$router.back"
+          >
+            <Icon :icon="faChevronLeft" aria-hidden="true" />
+          </button>
+          <RouterLink class="app-brand" to="/">Ulrich</RouterLink>
+        </div>
+
+        <h1 class="app-route-title">{{ $route.meta.title }}</h1>
+
+        <div class="app-header-actions">
+          <details>
+            <summary class="app-icon-button" aria-label="Display settings">
+              <Icon :icon="faEllipsis" aria-hidden="true" />
+            </summary>
+            <ul class="app-menu">
+              <li>
+                <button
+                  type="button"
+                  @click="themeStore.set_theme(themeStore.theme === 'dark' ? 'light' : 'dark')"
+                >
+                  Switch to {{ themeStore.theme === 'dark' ? 'light' : 'dark' }} theme
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-main">
+      <Notifications position="bottom right" :max="5" />
+      <RouterView />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
-import { faEllipsis, faBars, faChevronLeft } from '@fortawesome/free-solid-svg-icons'
+import { RouterLink, RouterView } from 'vue-router'
+import { faEllipsis, faChevronLeft } from '@fortawesome/free-solid-svg-icons'
 import { useThemeStore } from '@/stores/theme'
 import { Notifications } from '@kyvg/vue3-notification'
 

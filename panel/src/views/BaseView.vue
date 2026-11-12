@@ -1,154 +1,159 @@
 <template>
-  <section>
-    <article class="my-4 flex gap-2"></article>
-
-    <article class="my-4 flex justify-between">
-      <form class="flex gap-2">
-        <RouterLink class="btn btn-info text-white" :to="{ name: 'category-manage' }">
-          Manage
+  <main class="app-page">
+    <header class="app-page-heading">
+      <div>
+        <p class="app-kicker">URL management</p>
+        <h2>Your links</h2>
+        <p class="app-description">Create, organize, and review your tracked links</p>
+      </div>
+      <div class="app-actions">
+        <RouterLink class="app-button" :to="{ name: 'category-manage' }">
+          Manage categories
         </RouterLink>
-
-        <input
-          class="btn btn-square"
-          type="reset"
-          value="×"
-          @click="selected_categories_ids = []"
-        />
-
-        <input
-          v-model="selected_categories_ids"
-          v-for="category in categories_list"
-          :key="category.id"
-          :value="category.id"
-          class="btn"
-          type="checkbox"
-          name="categories"
-          :aria-label="category.name"
-        />
-      </form>
-
-      <div class="flex gap-2">
-        <RouterLink class="btn btn-accent" :to="{ name: 'add-url' }">
-          Add
+        <RouterLink class="app-button app-button-primary" :to="{ name: 'add-url' }">
+          New link
         </RouterLink>
       </div>
-    </article>
+    </header>
 
-    <article>
-      <label class="input w-full border-0 border-b shadow outline-0" 
-          :class="query_form_is_vaild ? 'outline-1 outline-error':''"
-      >
-        <Icon class="h-[1em] opacity-50" :icon="faSearch" />
-        <input
-          type="search"
-          class="grow w-full"
-          placeholder="Search Url & Code | Add a url"
-          v-model="query"
-          @keydown.enter.prevent="addNewUrl"
-        />
-      </label>
-    </article>
+    <section class="app-panel links-panel" aria-label="Short link list">
+      <div class="links-toolbar">
+        <div class="category-filter">
+          <div class="filter-heading">
+            <span>Categories</span>
+            <button
+              class="app-button app-button-quiet clear-filter"
+              type="button"
+              :disabled="!selected_categories_ids.length"
+              @click="selected_categories_ids = []"
+            >
+              Clear
+            </button>
+          </div>
+          <div class="app-chip-group">
+            <label
+              v-for="category in categories_list"
+              :key="category.id"
+              class="app-filter-chip"
+            >
+              <input
+                v-model="selected_categories_ids"
+                :value="category.id"
+                type="checkbox"
+                name="categories"
+              />
+              <span>{{ category.name }}</span>
+            </label>
+            <span v-if="!categories_list.length" class="filter-empty">
+              No categories
+            </span>
+          </div>
+        </div>
 
-    <article>
-      <div class="overflow-x-auto min-h-[40vh] max-h-[80vh]">
-        <table class="table table-zebra">
-          <thead class="sticky top-0 z-10 bg-base-100">
+        <label class="app-control link-search" :class="{ 'is-invalid': query_form_is_vaild }">
+          <Icon :icon="faSearch" aria-hidden="true" />
+          <input
+            v-model="query"
+            type="search"
+            aria-label="Search links or enter a URL to create"
+            placeholder="Search links or paste a URL to create"
+            :aria-invalid="query_form_is_vaild"
+            @keydown.enter.prevent="addNewUrl"
+          />
+        </label>
+        <p v-if="query_form_is_vaild" class="app-field-error search-error">
+          Enter a valid URL that is not already in your links
+        </p>
+      </div>
+
+      <div class="app-table-wrap">
+        <table class="app-table links-table">
+          <thead>
             <tr>
-              <th></th>
-              <th class="w-1/2">Url</th>
-              <th class="text-center">Code</th>
-              <th class="text-center">Visit</th>
-              <th class="text-center">Type</th>
-              <th class="text-center">Edit</th>
-              <!-- <th class="text-center">Delete</th> -->
+              <th scope="col" class="row-number">#</th>
+              <th scope="col" class="destination-column">Destination</th>
+              <th scope="col">Short code</th>
+              <th scope="col" class="number-cell">Visits</th>
+              <th scope="col">Type</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
-
           <tbody>
             <tr v-for="(url, index) in result_list" :key="url.code">
-              <th>{{ index + 1 }}</th>
-
-              <td class="w-1/2">
+              <th scope="row" class="row-number">{{ index + 1 }}</th>
+              <td class="destination-column">
                 <a
                   :href="url.url"
                   target="_blank"
-                  class="font-semibold underline text-accent"
+                  rel="noopener noreferrer"
+                  class="app-table-link"
                 >
                   {{ url.url?.substring(0, 80) }}
-                  {{ url.url.length > 80 ? '...' : '' }}
+                  {{ url.url?.length > 80 ? '…' : '' }}
                 </a>
               </td>
-
-              <td
-                class="text-start cursor-pointer underline link-info"
-                @click="copyCode(url.code)"
-              >
-                <span v-if="copiedCode !== url.code">
-                  {{ url.code }}
-                </span>
-
-                <span
-                  v-else
-                  class="text-xs bg-success text-success-content px-2 py-1 rounded"
+              <td>
+                <button
+                  class="code-copy app-code"
+                  type="button"
+                  :aria-label="copiedCode === url.code ? 'Short link copied' : 'Copy short link'"
+                  @click="copyCode(url.code)"
                 >
-                  Copied
-                </span>
+                  {{ copiedCode === url.code ? 'Copied' : url.code }}
+                </button>
               </td>
-
-              <td 
-                class="text-center cursor-pointer"
-                :class="url.click_count > 0 ? '' : 'text-gray-500'"
-                @click="$router.push({
-                  name: 'analytical-view',
-                  params: {
-                    url_id: url.id,
-                    url_code: url.code
-                  }
-                })"
-                >
-                {{ url.click_count }} <Icon :icon="faEye" />
-              </td>
-
-              <td class="text-center">
-                <div
-                  v-if="url.preview_type === 'image'"
-                  class="tooltip tooltip-bottom tooltip-primary"
-                >
-                  <div class="tooltip-content">
-                    <span>image</span>
-                    <img
-                      class="p-1 object-contain"
-                      width="200"
-                      height="200"
-                      :src="url.url"
-                    />
-                  </div>
-                  <Icon :icon="faImage" />
-                </div>
-                <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Video"><Icon v-if="url.preview_type === 'video'" :icon="faVideo" /></div> 
-                <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Url"><Icon v-if="url.preview_type === 'url'" :icon="faLink" /></div>
-              </td>
-
-              <td class="text-center">
+              <td class="number-cell">
                 <RouterLink
-                  class="btn btn-sm btn-ghost link-accent"
+                  class="visits-link"
+                  :to="{
+                    name: 'analytical-view',
+                    params: { url_id: url.id, url_code: url.code }
+                  }"
+                  :aria-label="`View ${url.click_count} visits`"
+                >
+                  {{ url.click_count }}
+                  <Icon :icon="faEye" aria-hidden="true" />
+                </RouterLink>
+              </td>
+              <td>
+                <span class="type-cell" :title="url.preview_type">
+                  <Icon
+                    v-if="url.preview_type === 'image'"
+                    :icon="faImage"
+                    aria-hidden="true"
+                  />
+                  <Icon
+                    v-else-if="url.preview_type === 'video'"
+                    :icon="faVideo"
+                    aria-hidden="true"
+                  />
+                  <Icon
+                    v-else-if="url.preview_type === 'url'"
+                    :icon="faLink"
+                    aria-hidden="true"
+                  />
+                  {{ url.preview_type || '—' }}
+                </span>
+              </td>
+              <td>
+                <RouterLink
+                  class="app-button app-button-quiet row-action"
                   :to="{ name: 'manage-url', params: { url_code: url.code } }"
                 >
                   Edit
                 </RouterLink>
               </td>
-
-              <!-- <td class="text-center">
-                <button class="btn btn-sm btn-ghost link-error">
-                  Delete
-                </button>
-              </td> -->
+            </tr>
+            <tr v-if="!result_list.length">
+              <td colspan="6" class="app-empty-state">
+                {{ url_list.length ? 'No links match these filters' : 'No links yet' }}
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </article>
-  </section>
+    </section>
+  </main>
 </template>
 
 <script setup>
@@ -239,3 +244,134 @@ onMounted(async () => {
   load_categories_list()
 })
 </script>
+
+<style scoped>
+.links-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.links-toolbar {
+  display: grid;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.category-filter {
+  display: grid;
+  gap: 8px;
+}
+
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+.clear-filter {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.filter-empty {
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.link-search {
+  width: 100%;
+}
+
+.link-search.is-invalid {
+  border-color: var(--app-danger);
+}
+
+.search-error {
+  margin: -8px 0 0;
+}
+
+.links-table .destination-column {
+  width: 48%;
+}
+
+.row-number {
+  width: 44px;
+  color: var(--app-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.number-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-copy {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.code-copy:hover {
+  color: var(--app-accent);
+}
+
+.visits-link,
+.type-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visits-link {
+  color: var(--app-text-secondary);
+  text-decoration: none;
+}
+
+.visits-link:hover {
+  color: var(--app-accent);
+}
+
+.type-cell {
+  color: var(--app-text-secondary);
+  text-transform: capitalize;
+}
+
+.row-action {
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .links-table .destination-column {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .links-toolbar {
+    padding: 16px;
+  }
+
+  .links-panel {
+    padding: 0;
+  }
+
+  .links-table th,
+  .links-table td {
+    padding: 10px 6px;
+  }
+
+  .links-table th:first-child,
+  .links-table td:first-child {
+    display: none;
+  }
+}
+</style>
