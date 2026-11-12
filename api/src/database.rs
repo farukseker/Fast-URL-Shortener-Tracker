@@ -65,6 +65,15 @@ pub(crate) async fn initialize(pool: &PgPool) -> Result<(), sqlx::Error> {
     )
     .execute(pool)
     .await?;
+    sqlx::query("UPDATE url_visit_actions SET count = 1 WHERE count IS NULL")
+        .execute(pool)
+        .await?;
+    sqlx::query("ALTER TABLE url_visit_actions ALTER COLUMN count SET DEFAULT 1")
+        .execute(pool)
+        .await?;
+    sqlx::query("ALTER TABLE url_visit_actions ALTER COLUMN count SET NOT NULL")
+        .execute(pool)
+        .await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS ix_url_visit_actions_url_id ON url_visit_actions (url_id)")
         .execute(pool)
         .await?;

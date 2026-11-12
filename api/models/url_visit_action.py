@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, DateTime, Index
+from sqlalchemy import Integer, String, DateTime, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -28,7 +28,9 @@ class UrlVisitAction(Base):
     geo_data: Mapped[dict | None] = mapped_column(JSONB)
 
     user_agent: Mapped[str] = mapped_column(String, nullable=False)
-    count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=text("1")
+    )
 
     action_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

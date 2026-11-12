@@ -87,8 +87,8 @@ async fn record_visit(
         let city = geo_data.get("city").and_then(Value::as_str).map(str::to_owned);
         sqlx::query(
             "INSERT INTO url_visit_actions \
-             (url_id, ip_address, ip_host, ip_provider, country, city, geo_data, user_agent) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+             (url_id, ip_address, ip_host, ip_provider, country, city, geo_data, user_agent, count) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         )
         .bind(url_id)
         .bind(&ip_address)
@@ -98,6 +98,7 @@ async fn record_visit(
         .bind(city)
         .bind(if geo_data.is_null() { None } else { Some(geo_data) })
         .bind(user_agent)
+        .bind(1_i32)
         .execute(&pool)
         .await?;
     }
@@ -178,11 +179,111 @@ pub(crate) async fn list_visit_actions(
 
 #[cfg(test)]
 mod tests {
-    use super::BOT_USER_AGENT;
+    use std::{
+        str::FromStr,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use sqlx::{
+        postgres::{PgConnectOptions, PgPoolOptions},
+        Row,
+    };
+
+    use super::{record_visit, BOT_USER_AGENT};
 
     #[test]
     fn bot_user_agents_are_recognized_case_insensitively() {
         assert!(BOT_USER_AGENT.is_match("GoogleBot/2.1"));
         assert!(!BOT_USER_AGENT.is_match("Mozilla/5.0"));
+    }
+
+    #[tokio::test]
+    async fn visit_without_count_input_is_inserted_with_count_one() {
+        let Ok(database_url) = std::env::var("TEST_DATABASE_URL") else {
+            eprintln!("skipping PostgreSQL visit test: TEST_DATABASE_URL is not set");
+            return;
+        };
+        let admin_pool = PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .expect("connect to test PostgreSQL database");
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock after Unix epoch")
+            .as_nanos();
+        let schema = format!("analytics_test_{}_{}", std::process::id(), timestamp);
+        sqlx::query(&format!("CREATE SCHEMA {schema}"))
+            .execute(&admin_pool)
+            .await
+            .expect("create isolated test schema");
+
+        let options = PgConnectOptions::from_str(&database_url)
+            .expect("valid PostgreSQL URL")
+            .options([("search_path", schema.as_str())]);
+        let pool = PgPoolOptions::new()
+            .connect_with(options)
+            .await
+            .expect("connect to isolated test schema");
+        let result = async {
+            sqlx::query(
+                "CREATE TABLE url_visit_actions (\
+                    id SERIAL PRIMARY KEY,\
+                    url_id INTEGER NOT NULL,\
+                    ip_address VARCHAR(45) NOT NULL,\
+                    ip_host TEXT,\
+                    ip_provider TEXT,\
+                    country TEXT,\
+                    city TEXT,\
+                    geo_data JSONB,\
+                    user_agent TEXT NOT NULL,\
+                    count INTEGER,\
+                    action_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+                )",
+            )
+            .execute(&pool)
+            .await?;
+            sqlx::query(
+                "INSERT INTO url_visit_actions (url_id, ip_address, user_agent, count) \
+                 VALUES (1, '198.51.100.1', 'test-agent', NULL)",
+            )
+            .execute(&pool)
+            .await?;
+            crate::database::initialize(&pool).await?;
+            record_visit(
+                pool.clone(),
+                None,
+                1,
+                "198.51.100.1".to_owned(),
+                "test-agent".to_owned(),
+            )
+            .await?;
+            record_visit(
+                pool.clone(),
+                None,
+                1,
+                "198.51.100.2".to_owned(),
+                "test-agent".to_owned(),
+            )
+            .await?;
+            let rows = sqlx::query(
+                "SELECT ip_address, count FROM url_visit_actions ORDER BY ip_address",
+            )
+            .fetch_all(&pool)
+            .await?;
+            let migrated_count = rows[0].get("count");
+            let inserted_count = rows[1].get("count");
+            Ok::<(i32, i32), Box<dyn std::error::Error + Send + Sync>>(
+                (migrated_count, inserted_count),
+            )
+        }
+        .await;
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin_pool)
+            .await
+            .expect("drop isolated test schema");
+        admin_pool.close().await;
+        assert_eq!(result.expect("record visits in isolated schema"), (2, 1));
     }
 }
