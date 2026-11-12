@@ -1,6 +1,0 @@
-fastapi
-sqlalchemy
-asyncpg
-uvicorn
-python-dotenv
-beautifulsoup4

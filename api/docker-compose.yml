@@ -23,7 +23,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-urlshort}
       ADMIN_TOKEN: ${ADMIN_TOKEN:?Set ADMIN_TOKEN in .env}
-      API_QUERY_HOST: ${API_QUERY_HOST:-http://ip-api.com/json}
+      API_QUERY_HOST: ${API_QUERY_HOST:-http://ip-api.com/json/}
       SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       db:

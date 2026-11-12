@@ -1,6 +1,3 @@
 .git
 .venv
 target
-__pycache__
-*.py[cod]
-tests
