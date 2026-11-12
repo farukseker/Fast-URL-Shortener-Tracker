@@ -113,7 +113,7 @@ async fn lookup_ip(query_host: Option<String>, ip_address: &str) -> Value {
     if ip_address == "unknown" {
         return Value::Null;
     }
-    let url = format!("{}/{}", host.trim_end_matches('/'), ip_address);
+    let url = build_ip_lookup_url(&host, ip_address);
     let response = match reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -153,6 +153,14 @@ async fn lookup_ip(query_host: Option<String>, ip_address: &str) -> Value {
         "asn": data.get("as"),
         "host": data.get("org"),
     })
+}
+
+fn build_ip_lookup_url(host: &str, ip_address: &str) -> String {
+    if host.contains('?') {
+        format!("{host}{ip_address}")
+    } else {
+        format!("{}/{}", host.trim_end_matches('/'), ip_address)
+    }
 }
 
 fn report_ip_lookup_failure(reason: &'static str) {
@@ -211,7 +219,23 @@ mod tests {
         Row,
     };
 
-    use super::{record_visit, BOT_USER_AGENT};
+    use super::{build_ip_lookup_url, record_visit, BOT_USER_AGENT};
+
+    #[test]
+    fn query_endpoint_appends_ip_without_a_path_separator() {
+        assert_eq!(
+            build_ip_lookup_url("https://query-ip.com/?ip=", "198.51.100.1"),
+            "https://query-ip.com/?ip=198.51.100.1"
+        );
+    }
+
+    #[test]
+    fn path_endpoint_appends_ip_as_a_path_segment() {
+        assert_eq!(
+            build_ip_lookup_url("http://ip-api.com/json/", "198.51.100.1"),
+            "http://ip-api.com/json/198.51.100.1"
+        );
+    }
 
     #[test]
     fn bot_user_agents_are_recognized_case_insensitively() {
