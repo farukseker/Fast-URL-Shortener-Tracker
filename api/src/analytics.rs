@@ -107,6 +107,7 @@ async fn record_visit(
 
 async fn lookup_ip(query_host: Option<String>, ip_address: &str) -> Value {
     let Some(host) = query_host.filter(|host| !host.is_empty()) else {
+        report_ip_lookup_failure("missing_query_host");
         return Value::Null;
     };
     if ip_address == "unknown" {
@@ -118,15 +119,25 @@ async fn lookup_ip(query_host: Option<String>, ip_address: &str) -> Value {
         .build()
     {
         Ok(client) => client.get(url).send().await,
-        Err(_) => return Value::Null,
+        Err(_) => {
+            report_ip_lookup_failure("client_build_failed");
+            return Value::Null;
+        }
     };
     let Ok(response) = response else {
+        report_ip_lookup_failure("request_failed");
         return Value::Null;
     };
+    if !response.status().is_success() {
+        report_ip_lookup_failure("http_status_not_success");
+        return Value::Null;
+    }
     let Ok(data) = response.json::<Value>().await else {
+        report_ip_lookup_failure("invalid_json_response");
         return Value::Null;
     };
     if data.get("status").and_then(Value::as_str) != Some("success") {
+        report_ip_lookup_failure("provider_status_not_success");
         return Value::Null;
     }
     json!({
@@ -142,6 +153,17 @@ async fn lookup_ip(query_host: Option<String>, ip_address: &str) -> Value {
         "asn": data.get("as"),
         "host": data.get("org"),
     })
+}
+
+fn report_ip_lookup_failure(reason: &'static str) {
+    tracing::warn!(reason, "IP geolocation query failed");
+    sentry::with_scope(
+        |scope| {
+            scope.set_tag("component", "ip_geolocation");
+            scope.set_tag("failure_reason", reason);
+        },
+        || sentry::capture_message("IP geolocation query failed", sentry::Level::Error),
+    );
 }
 
 pub(crate) async fn list_visit_actions(

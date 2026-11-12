@@ -13,7 +13,10 @@ POSTGRES_DB=urlshort
 ADMIN_TOKEN=replace-with-a-long-random-token
 API_PORT=8000
 API_QUERY_HOST=http://ip-api.com/json
+SENTRY_DSN=https://your-sentry-dsn
 ```
+
+`SENTRY_DSN` is optional. When configured, IP geolocation lookup failures are reported to Sentry with a failure-reason tag.
 
 Start the API and database:
 

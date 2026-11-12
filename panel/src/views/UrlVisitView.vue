@@ -107,9 +107,9 @@
                       <tr>
                           <td class="shadow" :colspan="7">
                               <ul>
-                                  <li><strong>Provider: </strong>{{visit.geo_data.isp}}</li>
-                                  <li><strong>Provider Name: </strong>{{visit.geo_data.org}}</li>
-                                  <li><strong>Post Code: </strong>{{visit.geo_data.zip}}</li>
+                                  <li><strong>Provider: </strong>{{ visit.geo_data?.isp || '-' }}</li>
+                                  <li><strong>Provider Name: </strong>{{ visit.geo_data?.org || '-' }}</li>
+                                  <li><strong>Post Code: </strong>{{ visit.geo_data?.zip || '-' }}</li>
                                   <li><strong>User Agent: </strong>{{visit.user_agent}}</li>
                               </ul> 
                           </td>

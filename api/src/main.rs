@@ -19,6 +19,14 @@ use state::AppState;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
+    let _sentry_guard = std::env::var("SENTRY_DSN")
+        .ok()
+        .filter(|dsn| !dsn.trim().is_empty())
+        .map(|dsn| {
+            let mut options = sentry::ClientOptions::default();
+            options.release = sentry::release_name!();
+            sentry::init((dsn, options))
+        });
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
